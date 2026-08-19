@@ -1,0 +1,6 @@
+@WebAPITimescaleData_HostAddress = https://localhost:7106
+
+GET {{WebAPITimescaleData_HostAddress}}/results
+Accept: application/json
+
+###
