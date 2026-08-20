@@ -51,6 +51,25 @@ namespace WebAPITimescaleData.Controllers
                     return BadRequest(validError + $"в строке {i}");
                 }
             }
+
+            Result result = new Result();
+            result.FileName = csvFile.FileName;
+            result.TimeDelta = (records.Max(x => x.Date) - records.Min(x => x.Date)).TotalSeconds;
+            result.StartDateTime = records.Min(x => x.Date);
+            result.AverageExecutionTime = records.Average(x => x.ExecutionTime);
+            result.AverageValue = records.Average(x => x.Value);
+            result.MaxValue = records.Max(x => x.Value);
+            result.MinValue = records.Min(x => x.Value);
+            var orderedByValueRecords = records.OrderBy(x => x.Value);
+            if (recordsCount % 2 == 0)
+            {
+                result.MedianValue = (orderedByValueRecords.ElementAt(recordsCount / 2).Value +
+                    orderedByValueRecords.ElementAt((recordsCount - 1) / 2).Value) / 2;
+            }
+            else
+            {
+                result.MedianValue = orderedByValueRecords.ElementAt(recordsCount / 2).Value;
+            }
             return Ok();
         }
 
