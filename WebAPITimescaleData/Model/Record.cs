@@ -1,12 +1,12 @@
 ﻿namespace WebAPITimescaleData.Model
 {
-    public class Value
+    public class Record
     {
         public string FileName { get; set; }
 
-        public double Val { get; set; }
+        public double Value { get; set; }
 
-        public DateTime StartDateTime { get; set; }
+        public DateTime Date { get; set; }
 
         public double ExecutionTime { get; set; }
     }
