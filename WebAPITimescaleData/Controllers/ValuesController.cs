@@ -1,11 +1,11 @@
 ﻿using CsvHelper;
 using CsvHelper.Configuration;
-using Npgsql.EntityFrameworkCore.PostgreSQL;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 using System.Globalization;
+using WebAPITimescaleData.Data;
 using WebAPITimescaleData.Model;
-
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace WebAPITimescaleData.Controllers
 {
@@ -13,6 +13,8 @@ namespace WebAPITimescaleData.Controllers
     [ApiController]
     public class ValuesController : ControllerBase
     {
+        private readonly WebApiAppDbContext _context;
+
         [HttpGet("/last10values/{fileName}")]
         public Record[] GetLastValues(string fileName)
         {
@@ -53,24 +55,38 @@ namespace WebAPITimescaleData.Controllers
                 }
             }
 
-            Result result = new Result();
-            result.FileName = csvFile.FileName;
-            result.TimeDelta = (records.Max(x => x.Date) - records.Min(x => x.Date)).TotalSeconds;
-            result.StartDateTime = records.Min(x => x.Date);
-            result.AverageExecutionTime = records.Average(x => x.ExecutionTime);
-            result.AverageValue = records.Average(x => x.Value);
-            result.MaxValue = records.Max(x => x.Value);
-            result.MinValue = records.Min(x => x.Value);
+            Result? result = _context.Results.FirstOrDefault(v => v.FileName == csvFile.FileName);
+            if (result != null)
+            {
+                _context.Results.Remove(result);
+                var values = _context.Values.Where(v =>  v.FileName == csvFile.FileName).ToList();
+                _context.Values.RemoveRange(values);
+            }
+
+            Result newResult = new Result
+            {
+                FileName = csvFile.FileName,
+                TimeDelta = (records.Max(x => x.Date) - records.Min(x => x.Date)).TotalSeconds,
+                StartDateTime = records.Min(x => x.Date),
+                AverageExecutionTime = records.Average(x => x.ExecutionTime),
+                AverageValue = records.Average(x => x.Value),
+                MaxValue = records.Max(x => x.Value),
+                MinValue = records.Min(x => x.Value)
+            };
             var orderedByValueRecords = records.OrderBy(x => x.Value);
             if (recordsCount % 2 == 0)
             {
-                result.MedianValue = (orderedByValueRecords.ElementAt(recordsCount / 2).Value +
+                newResult.MedianValue = (orderedByValueRecords.ElementAt(recordsCount / 2).Value +
                     orderedByValueRecords.ElementAt((recordsCount - 1) / 2).Value) / 2;
             }
             else
             {
-                result.MedianValue = orderedByValueRecords.ElementAt(recordsCount / 2).Value;
+                newResult.MedianValue = orderedByValueRecords.ElementAt(recordsCount / 2).Value;
             }
+
+            _context.Values.AddRange(records);
+            _context.Results.Add(newResult);
+            _context.SaveChanges();
             return Ok();
         }
 
@@ -91,6 +107,11 @@ namespace WebAPITimescaleData.Controllers
                 return "Отрицательное значения показателя";
             }
             return string.Empty;
+        }
+
+        public ValuesController(WebApiAppDbContext context)
+        {
+            _context = context;
         }
     }
 }
