@@ -2,29 +2,50 @@
 using CsvHelper.Configuration;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Npgsql.EntityFrameworkCore.PostgreSQL;
 using System.Globalization;
 using WebAPITimescaleData.Data;
 using WebAPITimescaleData.Model;
 
 namespace WebAPITimescaleData.Controllers
 {
+    /// <summary>
+    /// Класс для методов, направленных на работу с таблицей Values.
+    /// </summary>
     [Route("[controller]")]
     [ApiController]
     public class ValuesController : ControllerBase
     {
+        /// <summary>
+        /// База данных.
+        /// </summary>
         private readonly WebApiAppDbContext _context;
 
+        /// <summary>
+        /// Возвращает последние 10 значений, отсортированных по
+        /// начальному времени запуска Date по имени заданного файла.
+        /// </summary>
+        /// <param name="fileName">Имя файла.</param>
+        /// <returns>Вернёт сообщение об ошибке, если не получится
+        /// получить записи с заданным именем файла.</returns>
         [HttpGet("/last10values/{fileName}")]
-        public Record[] GetLastValues(string fileName)
+        public async Task<IActionResult> GetLastValues(string fileName)
         {
             var records = _context.Values
                                     .Where(v => v.FileName == fileName)
                                     .OrderByDescending(o => o.Date)
                                     .ToArray();
-            return records[0..10];
+            if (records.Length == 0) 
+            { 
+                return BadRequest("Некорректное имя файла или записи с этим именем отсутствуют."); 
+            }
+            return Ok(records[0..10]);
         }
 
+        /// <summary>
+        /// Добавляет новые записи в базу данных или изменяет старые.
+        /// </summary>
+        /// <param name="csvFile">Файл формата csv.</param>
+        /// <returns>Возвращает сообщение об ошибке, если какая-то запись или файл не проходит валидацию.</returns>
         [HttpPost("/upload")]
         public async Task<IActionResult> Upload(IFormFile csvFile)
         {
@@ -48,6 +69,7 @@ namespace WebAPITimescaleData.Controllers
                 return BadRequest("Файл содержит больше 10000 строк");
             }
 
+            //Валидация полей.
             for (int i = 0; i < recordsCount; i++)
             {
                 string validError = IsRecordValid(records.ElementAt(i));
@@ -58,6 +80,7 @@ namespace WebAPITimescaleData.Controllers
                 records.ElementAt(i).FileName = csvFile.FileName;
             }
 
+            //Если в базе данных уже есть записи с именем загруженного файла, то удаляем их.
             Result? result = _context.Results.FirstOrDefault(v => v.FileName == csvFile.FileName);
             if (result != null)
             {
@@ -66,6 +89,7 @@ namespace WebAPITimescaleData.Controllers
                 _context.Values.RemoveRange(values);
             }
 
+            // Считаем интегральные значения и формируем новую запись в таблицу Result
             Result newResult = new Result
             {
                 FileName = csvFile.FileName,
@@ -76,6 +100,7 @@ namespace WebAPITimescaleData.Controllers
                 MaxValue = records.Max(x => x.Value),
                 MinValue = records.Min(x => x.Value)
             };
+            //Медиана.
             var orderedByValueRecords = records.OrderBy(x => x.Value);
             if (recordsCount % 2 == 0)
             {
@@ -86,13 +111,19 @@ namespace WebAPITimescaleData.Controllers
             {
                 newResult.MedianValue = orderedByValueRecords.ElementAt(recordsCount / 2).Value;
             }
-
+            //Добавляем записи в таблицы и сохраняем изменения.
             _context.Values.AddRange(records);
             _context.Results.Add(newResult);
             _context.SaveChanges();
             return Ok();
         }
 
+        /// <summary>
+        /// Проверяет валидность записи csv-файла.
+        /// </summary>
+        /// <param name="record">Запись csv-файла</param>
+        /// <returns>Строка с описанием ошибки валидации, если она произошла,
+        /// иначе - string.Empty.</returns>
         private string IsRecordValid(Record record) 
         {
             DateTime startDiap = new DateTime(2000, 1, 1, 0, 0, 0);
