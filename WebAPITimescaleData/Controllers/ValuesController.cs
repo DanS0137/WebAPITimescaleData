@@ -31,15 +31,14 @@ namespace WebAPITimescaleData.Controllers
             using var stream = csvFile.OpenReadStream();
             using var reader = new StreamReader(stream);
 
-            var config = new CsvConfiguration(CultureInfo.InvariantCulture)
-            {
-                Delimiter = ";"
-            };
+            var config = new CsvConfiguration(CultureInfo.InvariantCulture);
+            config.Delimiter = ";";
+            config.MissingFieldFound = null;
+            config.HeaderValidated = null;
 
             using var csv = new CsvReader(reader, config);
-
-            var records = csv.GetRecords<Record>();
-            int recordsCount = records.Count();
+            var records = csv.GetRecords<Record>().ToList();
+            int recordsCount = records.Count;
 
             if (recordsCount > 10000)
             {
@@ -53,6 +52,7 @@ namespace WebAPITimescaleData.Controllers
                 {
                     return BadRequest(validError + $"в строке {i}");
                 }
+                records.ElementAt(i).FileName = csvFile.FileName;
             }
 
             Result? result = _context.Results.FirstOrDefault(v => v.FileName == csvFile.FileName);

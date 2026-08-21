@@ -9,7 +9,7 @@ namespace WebAPITimescaleData.Model
 
         public double TimeDelta { get; set; }
 
-        public DateTime StartDateTime { get; set; }
+        public DateTimeOffset StartDateTime { get; set; }
 
         public double AverageExecutionTime { get; set; }
 

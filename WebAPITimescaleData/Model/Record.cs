@@ -10,7 +10,7 @@ namespace WebAPITimescaleData.Model
 
         public double Value { get; set; }
 
-        public DateTime Date { get; set; }
+        public DateTimeOffset Date { get; set; }
 
         public double ExecutionTime { get; set; }
     }
