@@ -1,12 +1,15 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace WebAPITimescaleData.Model
 {
     public class Result
     {
+        [Key]
         public string FileName { get; set; }
 
         public double TimeDelta { get; set; }
 
-        public DateTime StartDateTime { get; set; }
+        public DateTimeOffset StartDateTime { get; set; }
 
         public double AverageExecutionTime { get; set; }
 
