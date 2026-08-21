@@ -50,7 +50,7 @@ namespace WebAPITimescaleData.Controllers
                 string validError = IsRecordValid(records.ElementAt(i));
                 if (validError != string.Empty)
                 {
-                    return BadRequest(validError + $"в строке {i}");
+                    return BadRequest(validError + $" в строке {i}");
                 }
                 records.ElementAt(i).FileName = csvFile.FileName;
             }
@@ -96,15 +96,15 @@ namespace WebAPITimescaleData.Controllers
             DateTime now = DateTime.Now;
             if (startDiap > record.Date || record.Date > now)
             {
-                return "Некорректное время начала ";
+                return "Некорректное время начала";
             }
-            if (record.ExecutionTime < 0)
+            if (record.ExecutionTime <= 0)
             {
-                return "Отрицательное значение времени выполнения";
+                return "Неположительное или отсутствующее значение времени выполнения";
             }
-            if (record.Value < 0)
+            if (record.Value <= 0)
             {
-                return "Отрицательное значения показателя";
+                return "Неположительное или отсутствующее значение показателя";
             }
             return string.Empty;
         }
