@@ -18,8 +18,11 @@ namespace WebAPITimescaleData.Controllers
         [HttpGet("/last10values/{fileName}")]
         public Record[] GetLastValues(string fileName)
         {
-            var result = new Record[10];
-            return result;
+            var records = _context.Values
+                                    .Where(v => v.FileName == fileName)
+                                    .OrderByDescending(o => o.Date)
+                                    .ToArray();
+            return records[0..10];
         }
 
         [HttpPost("/upload")]
